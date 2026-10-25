@@ -1,7 +1,6 @@
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import requests
 import urllib.parse
 import json
@@ -109,8 +108,7 @@ def get_delta_key(url: str):
     if len(current_ticket) < MIN_TICKET_LEN:
         return {"error": "Invalid ticket length"}
 
-    for round_idx in range(6): # Max rounds
-        # Check if key already exists
+    for round_idx in range(6):
         stat_res = get_session_status(current_ticket)
         data = stat_res.get('data', stat_res) if isinstance(stat_res, dict) else {}
         if data.get('key') and data.get('key') != 'KEY_NOT_FOUND':
@@ -118,7 +116,6 @@ def get_delta_key(url: str):
             cache[url] = {'key': key, 'time': time.time()}
             return {"key": key, "cached": False, "times": f"{round(time.time() - start_time, 1)}s"}
 
-        # Advance checkpoint
         step_res = do_step(current_ticket)
         if step_res.get('error'):
             return {"error": f"Step failed: {step_res['error']}"}
@@ -130,7 +127,6 @@ def get_delta_key(url: str):
             return {"error": "No URL in response"}
             
         if next_url == 'about:blank':
-            # Poll for key
             for _ in range(15):
                 time.sleep(0.5)
                 poll_res = get_session_status(current_ticket)
@@ -141,14 +137,13 @@ def get_delta_key(url: str):
                     return {"key": key, "cached": False, "times": f"{round(time.time() - start_time, 1)}s"}
             return {"error": "Polling timed out"}
 
-        # Decode callback and get next ticket
         callback = decode_callback_url(next_url)
         if callback:
             parsed_cb = urllib.parse.urlparse(callback)
             qs_cb = urllib.parse.parse_qs(parsed_cb.query)
             if 'd' in qs_cb:
                 current_ticket = qs_cb['d'][0]
-                continue # Go to next round
+                continue
         
         return {"error": "Could not decode callback"}
 
