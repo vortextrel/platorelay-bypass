@@ -2,4 +2,3 @@ fastapi
 uvicorn
 requests
 pycryptodome
-beautifulsoup4
